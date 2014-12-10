@@ -17,13 +17,13 @@ class BinaryTests extends FlatSpec {
                 (_buildHeap(size - 1, from.append(gen), math.max(gen, max)))
             }
         }
-        _buildHeap(size, Binary.empty(), Int.MinValue)
+        _buildHeap(size, Binary.Empty(), Int.MinValue)
     }
 
     val (heap, maximum) = buildHeap(64)
 
     "peek" should "be empty" in {
-        assertResult(None)(Binary.empty().peek())
+        assertResult(None)(Binary.Empty().peek())
     }
 
     "peek" should "return the maximum element of the heap" in {

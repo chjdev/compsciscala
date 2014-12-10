@@ -17,7 +17,7 @@ object Binary {
 
         override def height() = 0
 
-        override def append(v: T) = Binary.singleton(v)(comparator)
+        override def append(v: T) = singleton(v)(comparator)
 
         override def full() = false
 
@@ -48,10 +48,8 @@ object Binary {
 
         override def peek() = Some(root)
 
-        override def pop(): (Option[T], Binary[T]) = (Some(root), Binary.merge(left, right))
+        override def pop(): (Option[T], Binary[T]) = (Some(root), merge(left, right))
     }
-
-    def empty[T]() = Empty[T]
 
     def singleton[T](v: T)(implicit comparator: Ordering[T]) = NonEmpty(v, Empty[T], Empty[T])(comparator)
 
