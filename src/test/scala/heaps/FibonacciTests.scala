@@ -8,5 +8,5 @@ class FibonacciTests extends HeapTest[Fibonacci[Int]] {
 
     def empty = Fibonacci.Empty[Int]
 
-    def heapSize = 100
+    def heapSize = 500
 }
