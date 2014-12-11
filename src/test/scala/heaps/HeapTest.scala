@@ -7,8 +7,9 @@ import scala.util.Random
 
 trait HeapTest[T <: Heap[Int, T]] extends FlatSpec {
     def empty: T
+    def heapSize: Int
 
-    val (heap, maximum) = HeapTest.buildHeap[T](empty, 64)
+    val (heap, maximum) = HeapTest.buildHeap[T](empty, heapSize)
 
     "peek" should "be empty" in {
         assertResult(None)(Binary.Empty[Int].peek)

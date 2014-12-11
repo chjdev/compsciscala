@@ -42,9 +42,17 @@ object Fibonacci {
         override def decrease_key(v: T)(by: Int): NonEmpty[T] = ???
 
         implicit class ElementWrapper(element: Element[T]) {
-            val (v, NonEmpty(children, _)) = element
+            val (v, roots) = element
+            val children = roots match {
+                case NonEmpty(children, _) => children
+                case Empty() => Seq()
+            }
 
-            def _link_(other: Element[T]): Element[T] = other match {
+            def !+! : PartialFunction[Element[T], Element[T]] = {
+                case other if (element._2.degree == other._2.degree) => ?+?(other)
+            }
+
+            def ?+?(other: Element[T]): Element[T] = other match {
                 case (vo, NonEmpty(childrenO, _)) if comparator.gt(vo, v) => (vo, NonEmpty(element +: childrenO, 0)) // index???
                 case _ => (v, NonEmpty(other +: children, 0)) //index???
             }
@@ -59,17 +67,18 @@ object Fibonacci {
             def optimized: RootSeq[T] = {
                 @tailrec
                 def _optimized(roots: RootSeq[T], accu: Map[Int, Element[T]]): RootSeq[T] = roots match {
-                    case head :: tail => {
+                    case head +: tail => {
                         val (_, fib) = head
                         val subDegree = fib.degree
                         accu.get(subDegree) match {
-                            case Some(prior) => _optimized((head _link_ prior) +: tail, accu - subDegree)
+                            case Some(prior) => _optimized((head !+! prior) +: tail, accu - subDegree)
                             case None => _optimized(tail, accu + (subDegree -> head))
                         }
                     }
                     case _ => accu.values.toSeq
                 }
-                _optimized(seq, Map.empty)
+                if (roots.isEmpty) roots
+                else _optimized(seq, Map.empty)
             }
         }
 
@@ -77,10 +86,15 @@ object Fibonacci {
             val (minVal, subTree) = roots(minIdx)
             val shortened = roots.delIndex(minIdx)
             val newRoots = subTree match {
-                case NonEmpty(children, _) => (children ++ shortened).optimized
-                case _ => shortened.optimized
+                case NonEmpty(children, _) => (children ++ shortened)
+                case _ => shortened
             }
-            (Some(minVal), NonEmpty(newRoots, newRoots.minRootIdx))
+            (Some(minVal), fromRoots(newRoots))
+        }
+
+        def fromRoots(roots: RootSeq[T]): Fibonacci[T] = if (roots.isEmpty) Empty[T] else {
+            val optimizedRoots = roots.optimized
+            NonEmpty(optimizedRoots, optimizedRoots.minRootIdx)
         }
 
         override def delete(v: T): Fibonacci[T] = decrease_key(v)(Int.MinValue).pop._2 // real min value????
