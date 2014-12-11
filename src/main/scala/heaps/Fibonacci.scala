@@ -9,17 +9,17 @@ sealed trait Fibonacci[T] extends Heap[T, Fibonacci[T]] {
 object Fibonacci {
 
     case class Empty[T](implicit comparator: Ordering[T]) extends Fibonacci[T] {
-        override def degree = 0
+        override val degree = 0
 
-        override def size = 0
+        override val size = 0
 
-        override def peek = None
+        override val peek = None
 
         override def append(v: T) = singleton(v)
 
         override def decrease_key(v: T)(by: Int) = throw new IndexOutOfBoundsException()
 
-        override def pop = (None, Empty[T])
+        override lazy val pop = (None, Empty[T])
 
         override def delete(v: T) = throw new IndexOutOfBoundsException()
     }
@@ -28,9 +28,9 @@ object Fibonacci {
     type RootSeq[T] = Seq[Element[T]]
 
     case class NonEmpty[T](roots: RootSeq[T], minIdx: Int)(implicit comparator: Ordering[T]) extends Fibonacci[T] {
-        def degree: Int = roots.size
+        override val degree: Int = roots.size
 
-        override def size: Int = roots.map((element) => element._2.size).foldLeft(degree)(_ + _)
+        override lazy val size: Int = roots.map((element) => element._2.size).foldLeft(degree)(_ + _)
 
         override def peek: Option[T] = roots(minIdx) match {
             case (v, _) => Some(v)
@@ -48,23 +48,31 @@ object Fibonacci {
                 case Empty() => Seq()
             }
 
+            def withMe(subTree: Fibonacci[T]): RootSeq[T] = subTree match {
+                case NonEmpty(otherChildren, _) => element +: otherChildren
+                case _ => Seq(element)
+            }
+
+            def ?+?(other: Element[T]): Element[T] = {
+                other match {
+                    case (otherv, subTree) if comparator.lt(otherv, v) =>
+                        (otherv, NonEmpty(withMe(subTree), -1)) /// ??? index
+                    case _ => (v, NonEmpty(other +: children, -1)) //index???
+                }
+            }
+
             def !+! : PartialFunction[Element[T], Element[T]] = {
                 case other if (element._2.degree == other._2.degree) => ?+?(other)
             }
 
-            def ?+?(other: Element[T]): Element[T] = other match {
-                case (vo, NonEmpty(childrenO, _)) if comparator.gt(vo, v) => (vo, NonEmpty(element +: childrenO, 0)) // index???
-                case _ => (v, NonEmpty(other +: children, 0)) //index???
-            }
         }
 
         implicit class RootSeqWrapper(seq: RootSeq[T]) {
-            def delIndex(idx: Int) = if (seq.size < idx) seq
-            else seq.take(idx) ++ seq.drop(idx + 1)
+            def delIndex(idx: Int) = if (seq.size < idx) seq else seq.take(idx) ++ seq.drop(idx + 1)
 
-            def minRootIdx = seq.zipWithIndex.minBy(_._1._1)(comparator)._2
+            lazy val minRootIdx: Int = seq.zipWithIndex.minBy(_._1._1)(comparator)._2
 
-            def optimized: RootSeq[T] = {
+            lazy val optimized: RootSeq[T] = {
                 @tailrec
                 def _optimized(roots: RootSeq[T], accu: Map[Int, Element[T]]): RootSeq[T] = roots match {
                     case head +: tail => {
@@ -82,7 +90,7 @@ object Fibonacci {
             }
         }
 
-        override def pop: (Option[T], Fibonacci[T]) = {
+        override lazy val pop: (Option[T], Fibonacci[T]) = {
             val (minVal, subTree) = roots(minIdx)
             val shortened = roots.delIndex(minIdx)
             val newRoots = subTree match {
@@ -92,10 +100,12 @@ object Fibonacci {
             (Some(minVal), fromRoots(newRoots))
         }
 
-        def fromRoots(roots: RootSeq[T]): Fibonacci[T] = if (roots.isEmpty) Empty[T] else {
-            val optimizedRoots = roots.optimized
-            NonEmpty(optimizedRoots, optimizedRoots.minRootIdx)
-        }
+        def fromRoots(roots: RootSeq[T]): Fibonacci[T] =
+            if (roots.isEmpty) Empty[T]
+            else {
+                val optimizedRoots = roots.optimized
+                NonEmpty(optimizedRoots, optimizedRoots.minRootIdx)
+            }
 
         override def delete(v: T): Fibonacci[T] = decrease_key(v)(Int.MinValue).pop._2 // real min value????
 

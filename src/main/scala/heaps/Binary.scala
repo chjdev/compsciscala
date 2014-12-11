@@ -2,6 +2,7 @@ package heaps
 
 import scala.annotation.tailrec
 
+/** WARNING: implemented very inefficiently */
 sealed trait Binary[T] extends Heap[T, Binary[T]] {
     def height: Int
 
@@ -15,25 +16,25 @@ sealed trait Binary[T] extends Heap[T, Binary[T]] {
 object Binary {
 
     case class Empty[T](implicit comparator: Ordering[T]) extends Binary[T] {
-        override def size = 0
+        override val size = 0
 
-        override def height = 0
+        override val height = 0
 
         override def append(v: T) = singleton(v)(comparator)
 
-        override def full = false
+        override val full = false
 
-        override def toString = "Empty"
+        override val toString = "Empty"
 
-        override def peek = None
+        override val peek = None
 
-        override def pop = (None, Empty[T])
+        override lazy val pop = (None, Empty[T])
     }
 
     case class NonEmpty[T](root: T, left: Binary[T], right: Binary[T])(implicit comparator: Ordering[T]) extends Binary[T] {
-        override def size = left.size + right.size + 1
+        override lazy val size = left.size + right.size + 1
 
-        override def height = 1 + math.max(left.height, right.height)
+        override lazy val height = 1 + math.max(left.height, right.height)
 
         override def toString = "(" + root + ": (" + left + ", " + right + "))"
 
@@ -46,11 +47,11 @@ object Binary {
             else NonEmpty(nroot, left.append(nchild), right)
         }
 
-        override def full: Boolean = left.size == math.pow(2, left.height) - 1 && right.size == math.pow(2, right.height) - 1
+        override lazy val full: Boolean = left.size == math.pow(2, left.height) - 1 && right.size == math.pow(2, right.height) - 1
 
-        override def peek = Some(root)
+        override val peek = Some(root)
 
-        override def pop: (Option[T], Binary[T]) = (Some(root), merge(left, right))
+        override lazy val pop: (Option[T], Binary[T]) = (Some(root), merge(left, right))
     }
 
     def singleton[T](v: T)(implicit comparator: Ordering[T]) = NonEmpty(v, Empty[T], Empty[T])(comparator)
